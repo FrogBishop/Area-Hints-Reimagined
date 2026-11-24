@@ -10,7 +10,9 @@ Hints can show a full path of localized plain names with a styled Java Edition t
 
 Launch Minecraft 26.3 with Java 25 and Fabric Loader 0.19.5 or later. Put Fabric API for 26.3 (0.162.0 or later) and the mod JAR in the instance's `mods` directory. For multiplayer, install the mod and Fabric API on the server and on each client that wants hints. The singleplayer world owner and multiplayer authors with game-master permissions can edit the save.
 
-In **Options → Controls → Key Binds**, bind **Open Area Hints Menu** and **Mark Player Position**. Both start unbound. Open the menu, choose **New Region**, then **Properties** to enter an identifier and a fallback name. Choose **Add Sphere**, mark the center and a surface point, then reopen the menu and choose **Save Primitive**. Leave the expression at `0` and click **Save**. Use `/ahr here` to inspect the result at your feet.
+In **Options → Controls → Key Binds**, bind **Open Area Hints Menu** and **Mark Player Position**. Both start unbound. Choose **New Region → Properties**, enter an identifier and a fallback name, and press **Back** to keep them in the draft. Choose **Add Sphere**, mark the center and a surface point, then reopen the menu and choose **Save Primitive**. Leave the expression at `0` and click **Save** to write the region to the world. Use `/ahr here` to inspect the result at your feet.
+
+To see the geometry in the world, enable **Global Settings → Show primitive faces and outlines** and press **Back** or **Esc**. Each primitive in the current dimension gets translucent cyan faces and cyan outlines, including entries the expression does not reference. Gold marks the region draft as you edit it. Opaque terrain hides the faces behind it. The outlines remain visible through terrain. This client preference starts off. [World outlines](docs/region-editor.md#world-outlines)
 
 The client keeps its preferences in `config/area-hints-reimagined.json`. **World hint settings** edits the presentation overrides in `<save-root>/area-hints-reimagined/config.json`. After editing world files by hand, use `/ahr reload`.
 

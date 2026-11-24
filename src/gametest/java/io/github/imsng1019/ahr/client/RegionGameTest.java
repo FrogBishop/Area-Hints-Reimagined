@@ -8,13 +8,16 @@ import io.github.imsng1019.ahr.geometry.Point;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
 
 import java.util.*;
 
 public final class RegionGameTest implements FabricClientGameTest {
-    private static AreaHintsClient mod() {
+    static AreaHintsClient mod() {
         return FabricLoader.getInstance()
                 .getEntrypoints("client", ClientModInitializer.class)
                 .stream()
@@ -48,15 +51,38 @@ public final class RegionGameTest implements FabricClientGameTest {
                         mod().editor.open();
                     });
             ctx.clickScreenButton("New Region");
+            checkEditorGrid(ctx);
             ctx.clickScreenButton("Properties");
+            var size =
+                    ctx.computeOnClient(
+                            mc -> {
+                                var screen = mc.gui.screen();
+                                int[] original = {screen.width, screen.height};
+                                screen.resize(320, 134);
+                                checkPair(control(screen, "parent"), control(screen, "browse"));
+                                return original;
+                            });
+            ctx.clickScreenButton("›");
             ctx.runOnClient(
                     mc -> {
-                        for (var w : mc.gui.screen().children())
-                            if (w instanceof EditBox box
-                                    && box.getMessage().getString().equals("Identifier"))
-                                box.setValue("Shell");
+                        var identifier = (EditBox) control(mc.gui.screen(), "identifier");
+                        checkPair(identifier, control(mc.gui.screen(), "fallback"));
+                        identifier.setValue("Shell");
                     });
-            click(ctx, "Apply");
+            ctx.clickScreenButton("‹");
+            ctx.clickScreenButton("›");
+            ctx.runOnClient(
+                    mc -> {
+                        var screen = mc.gui.screen();
+                        var identifier = (EditBox) control(screen, "identifier");
+                        if (!identifier.getValue().equals("Shell"))
+                            throw new AssertionError("Paging lost the identifier");
+                        screen.resize(480, 320);
+                        if (!((EditBox) control(screen, "identifier")).getValue().equals("Shell"))
+                            throw new AssertionError("Resizing lost the identifier");
+                        screen.resize(size[0], size[1]);
+                    });
+            ctx.runOnClient(mc -> mc.gui.screen().onClose());
             click(ctx, "Add Sphere");
             ctx.runOnClient(
                     mc -> {
@@ -109,6 +135,61 @@ public final class RegionGameTest implements FabricClientGameTest {
                                     .containsKey("Shell"));
         }
         if (Boolean.getBoolean("ahr.testDedicatedServer")) verifyRemoteCache(ctx);
+    }
+
+    private static void checkEditorGrid(ClientGameTestContext ctx) {
+        String previous = ctx.computeOnClient(mc -> mc.getLanguageManager().getSelected());
+        try {
+            setLanguage(ctx, "zh_cn");
+            ctx.runOnClient(
+                    mc -> {
+                        var screen = mc.gui.screen();
+                        checkPair(control(screen, "save"), control(screen, "properties"));
+                        var expression = (EditBox) control(screen, "expression");
+                        checkPair(expression, control(screen, "editPart"));
+                        if (!expression.getMessage().getString().equals("布尔表达式"))
+                            throw new AssertionError("Expected the Simplified Chinese field label");
+                    });
+            ctx.takeScreenshot(
+                    TestScreenshotOptions.of("region-editor-two-columns-zh")
+                            .disableCounterPrefix());
+        } finally {
+            setLanguage(ctx, previous);
+        }
+    }
+
+    static void setLanguage(ClientGameTestContext ctx, String code) {
+        var reload =
+                ctx.computeOnClient(
+                        mc -> {
+                            mc.getLanguageManager().setSelected(code);
+                            return mc.reloadResourcePacks();
+                        });
+        ctx.waitFor(mc -> reload.isDone() && mc.gui.overlay() == null, 1200);
+        reload.join();
+        ctx.runOnClient(mc -> mod().editor.open());
+    }
+
+    private static AbstractWidget control(Screen screen, String key) {
+        String label = MenuPage.tr(key).getString();
+        return screen.children().stream()
+                .filter(AbstractWidget.class::isInstance)
+                .map(AbstractWidget.class::cast)
+                .filter(w -> w.getMessage().getString().equals(label))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing control: " + label));
+    }
+
+    private static void checkPair(AbstractWidget left, AbstractWidget right) {
+        if (left.getY() != right.getY()
+                || left.getWidth() != right.getWidth()
+                || left.getHeight() != right.getHeight()
+                || left.getX() + left.getWidth() >= right.getX())
+            throw new AssertionError(
+                    "Expected two equal-sized controls in the same row: "
+                            + left.getMessage().getString()
+                            + " / "
+                            + right.getMessage().getString());
     }
 
     private static void verifyRemoteCache(ClientGameTestContext ctx) {
@@ -171,7 +252,7 @@ public final class RegionGameTest implements FabricClientGameTest {
         }
     }
 
-    private static void click(ClientGameTestContext ctx, String label) {
+    static void click(ClientGameTestContext ctx, String label) {
         for (int i = 0; i < 8; i++) {
             if (ctx.tryClickScreenButton(label)) return;
             if (!ctx.tryClickScreenButton("›")) break;

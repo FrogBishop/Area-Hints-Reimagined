@@ -120,6 +120,10 @@ A server supplying only `showFullPath: true` can produce different displays for 
 
 ## Position and animation
 
+In **Global Settings** and **Properties**, enter **HUD X** and **HUD Y** separately. The placeholder on each axis shows its inherited or default value. Clearing both fields restores the inherited position, or the client preset `[0.5, 0.25]` in global settings. Entering just one axis stores the complete pair using the other axis's displayed value at the time of editing.
+
+Choose an effect in **Animation**, then open **Animation parameters** to edit its timings or motion. For example, **Instant** exposes only the hold duration, and **Wipe** also lets you select the reveal direction. An empty parameter uses the applicable global value or effect preset. **Use global animation** in a region clears its animation override.
+
 Store `position` as a normalized GUI coordinate pair `[x, y]`, with each value in `[0, 1]`. The top-left corner is `[0, 0]` and the bottom-right corner is `[1, 1]`. Center the **entire composed hint**, including the path, at `(x × W, y × H)` in the current scaled GUI of width `W` and height `H`. For measured text dimensions `w` and `h`, the top-left drawing position is `(x × W − w / 2, y × H − h / 2)`. Recalculate it on a window resize or GUI scale change. The example's `[0.5, 0.25]` gives centers of `(400, 120)` in an 800 × 480 GUI and `(640, 180)` in a 1280 × 720 GUI.
 
 Apply the target's effective animation to the composed hint as a whole. In the example, the target chooses its position and inherits the viewing player's animation. Measure the complete localized text, including separators and styled runs, before starting an effect. The configured center is where the hint rests during its hold phase.

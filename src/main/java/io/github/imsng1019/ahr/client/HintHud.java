@@ -74,17 +74,16 @@ final class HintHud {
         Component value = compose(mc, node, local, world);
         var hint = Json.object(node.json, "hint");
         var global = local.hints();
-        var position = hint.has("position") ? hint.get("position") : global.get("position");
-        x = position == null ? 0.5 : position.getAsJsonArray().get(0).getAsDouble();
-        y = position == null ? 0.25 : position.getAsJsonArray().get(1).getAsDouble();
+        x = Presentation.position(hint, global, 0);
+        y = Presentation.position(hint, global, 1);
         var motion = Presentation.animation(hint, global);
         type = motion.get("type").getAsString();
         origin = motion.has("origin") ? motion.get("origin").getAsString() : "left";
-        enter = Presentation.number(motion, "enterMs", 400);
-        hold = Presentation.number(motion, "holdMs", 1800);
-        exit = Presentation.number(motion, "exitMs", 400);
-        offset = Presentation.number(motion, "offsetLines", 0.75);
-        fromScale = Presentation.number(motion, "fromScale", 0.90);
+        enter = Presentation.parameter(motion, "enterMs");
+        hold = Presentation.parameter(motion, "holdMs");
+        exit = Presentation.parameter(motion, "exitMs");
+        offset = Presentation.parameter(motion, "offsetLines");
+        fromScale = Presentation.parameter(motion, "fromScale");
         width = 0;
         graphemes = 0;
         var layout = new ArrayList<Line>();
@@ -109,7 +108,7 @@ final class HintHud {
         }
         lines = layout;
         if (type.equals("Typewriter"))
-            enter = 1000.0 * graphemes / Presentation.number(motion, "graphemesPerSecond", 14);
+            enter = 1000.0 * graphemes / Presentation.parameter(motion, "graphemesPerSecond");
         if (type.equals("Instant")) {
             enter = 0;
             exit = 0;

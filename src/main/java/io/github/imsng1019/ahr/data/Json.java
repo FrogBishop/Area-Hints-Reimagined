@@ -59,6 +59,11 @@ public final class Json {
         return obj.has(key) ? obj.getAsJsonObject(key) : new JsonObject();
     }
 
+    public static void putOptionalObject(JsonObject obj, String key, JsonObject value) {
+        if (value.isEmpty()) obj.remove(key);
+        else obj.add(key, value);
+    }
+
     public static String string(JsonElement value) {
         if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString())
             throw new IllegalArgumentException("Expected a JSON string");

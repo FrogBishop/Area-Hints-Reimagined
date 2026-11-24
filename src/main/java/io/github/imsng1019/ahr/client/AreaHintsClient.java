@@ -30,6 +30,7 @@ public final class AreaHintsClient implements ClientModInitializer {
     final Detection detection = new Detection();
     final HintHud hud = new HintHud();
     final RegionEditor editor = new RegionEditor(this);
+    private final WorldOutlines outlines = new WorldOutlines();
     private String lastDimension;
 
     static Minecraft mc() {
@@ -55,6 +56,7 @@ public final class AreaHintsClient implements ClientModInitializer {
         var menu = key("menu", group);
         var mark = key("mark", group);
         HudElementRegistry.addLast(Wire.id("hint"), (graphics, tick) -> hud.render(graphics));
+        outlines.register(this);
         ClientTickEvents.END_CLIENT_TICK.register(
                 mc -> {
                     while (menu.consumeClick())
@@ -69,7 +71,7 @@ public final class AreaHintsClient implements ClientModInitializer {
                             || !level.tickRateManager().runsNormally()) return;
                     String id = dimension();
                     if (!id.equals(lastDimension)) {
-                        if (lastDimension != null) editor.reset();
+                        if (lastDimension != null) editor.dimensionChanged();
                         hud.clear();
                         detection.reset();
                         lastDimension = id;
@@ -99,6 +101,7 @@ public final class AreaHintsClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, mc) -> {
                     regions.reset();
+                    outlines.clear();
                     incoming.clear();
                     detection.reset();
                     hud.clear();

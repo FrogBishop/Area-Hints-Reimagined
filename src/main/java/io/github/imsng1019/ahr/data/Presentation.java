@@ -7,8 +7,29 @@ import java.util.*;
 public final class Presentation {
     private Presentation() {}
 
-    public static final Set<String> EFFECTS =
-            Set.of("Genshin", "Fade", "Instant", "Wipe", "Zoom", "Typewriter");
+    public static final List<String> EFFECTS =
+            List.of("Genshin", "Fade", "Wipe", "Zoom", "Typewriter", "Instant");
+
+    public static double position(JsonObject node, JsonObject global, int axis) {
+        var value = node.has("position") ? node.get("position") : global.get("position");
+        if (value != null) return value.getAsJsonArray().get(axis).getAsDouble();
+        return axis == 0 ? 0.5 : 0.25;
+    }
+
+    public static double parameter(JsonObject motion, String key) {
+        double preset =
+                switch (key) {
+                    case "enterMs", "exitMs" -> 400;
+                    case "holdMs" -> 1800;
+                    case "offsetLines" -> 0.75;
+                    case "fromScale" -> 0.90;
+                    case "graphemesPerSecond" -> 14;
+                    default ->
+                            throw new IllegalArgumentException(
+                                    "Unknown animation parameter " + key);
+                };
+        return number(motion, key, preset);
+    }
 
     public static double number(JsonObject o, String key, double fallback) {
         if (!o.has(key)) return fallback;

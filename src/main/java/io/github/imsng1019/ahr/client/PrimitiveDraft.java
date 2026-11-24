@@ -48,6 +48,12 @@ final class PrimitiveDraft {
         return type.equals("sphere") || type.equals("cylinder");
     }
 
+    BigInteger radiusSquared() {
+        return points.size() == 2
+                ? points.getFirst().distanceSquared(points.get(1), projected())
+                : savedRadius;
+    }
+
     boolean mark(Point p) {
         if (radial() && points.size() >= 2) return false;
         points.add(p);
@@ -91,12 +97,8 @@ final class PrimitiveDraft {
             if (points.isEmpty() || (points.size() == 1 && savedRadius == null))
                 throw new IllegalArgumentException("Mark the center and a surface point");
             var center = points.getFirst();
-            var radius =
-                    points.size() == 2
-                            ? center.distanceSquared(points.get(1), projected())
-                            : savedRadius;
             data.add("center", projected() ? center.xz() : center.json());
-            data.addProperty("radiusSquared", Primitive.checkedRadius(radius));
+            data.addProperty("radiusSquared", Primitive.checkedRadius(radiusSquared()));
         } else {
             data.addProperty("insideAtInfinity", infinity);
             var vertices = new JsonArray();
