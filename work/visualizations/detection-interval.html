@@ -1,0 +1,77 @@
+<div id="ahr-detection-interval" lang="zh-CN">
+  <div class="period-heading">
+    <label for="ahr-period-slider">自动检测周期</label>
+    <output for="ahr-period-slider" class="tabular-nums" data-period>1 游戏秒</output>
+  </div>
+  <div class="period-track">
+    <input id="ahr-period-slider" class="form-range" type="range" min="0" max="1" step="any" value="0.5" aria-valuetext="1 游戏秒" aria-describedby="ahr-period-samples">
+  </div>
+  <div class="period-axis text-small tabular-nums" aria-hidden="true">
+    <span><i>0.0625</i></span><span><i>0.125</i></span><span><i>0.25</i></span>
+    <span><i>0.5</i></span><span><i>1</i></span><span><i>2</i></span>
+    <span><i>4</i></span><span><i>8</i></span><span><i>16</i></span>
+  </div>
+  <div id="ahr-period-samples" class="text-small text-muted">从 tick 0 开始计时，随后五次检测在 tick <span class="tabular-nums" data-ticks>20、40、60、80、100</span>。</div>
+  <style>
+    #ahr-detection-interval { display: grid; gap: calc(var(--font-size-base, 14px) * .4); container-type: inline-size; }
+    #ahr-detection-interval .period-heading { display: flex; align-items: baseline; gap: var(--font-size-base, 14px); }
+    #ahr-detection-interval .period-track { display: flex; }
+    #ahr-detection-interval .period-axis { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)) 0; margin-inline: calc(var(--font-size-base, 14px) * .5); }
+    #ahr-detection-interval .period-axis span { position: relative; padding-top: calc(var(--font-size-base, 14px) * .4); }
+    #ahr-detection-interval .period-axis span::before { content: ""; position: absolute; top: 0; left: 0; height: calc(var(--font-size-base, 14px) * .3); width: 1px; background: var(--border); }
+    #ahr-detection-interval .period-axis i { display: block; width: max-content; font-style: normal; transform: translateX(-50%); }
+    #ahr-detection-interval .period-axis span:first-child i { transform: none; }
+    #ahr-detection-interval .period-axis span:last-child { display: flex; justify-content: flex-end; }
+    #ahr-detection-interval .period-axis span:last-child i { transform: none; }
+    @container (max-width: 440px) {
+      #ahr-detection-interval .period-axis span:nth-child(even) i { visibility: hidden; }
+    }
+  </style>
+  <script>
+  (() => {
+    const root = document.getElementById("ahr-detection-interval");
+    const slider = root.querySelector("input");
+    const readout = root.querySelector("[data-period]");
+    const ticks = root.querySelector("[data-ticks]");
+    const numberFormat = new Intl.NumberFormat("zh-CN", {maximumFractionDigits: 5});
+    function intervalSeconds() {
+      return 2 ** (8 * Number(slider.value) - 4);
+    }
+    function render() {
+      const seconds = intervalSeconds();
+      readout.textContent = numberFormat.format(seconds) + " 游戏秒";
+      slider.setAttribute("aria-valuetext", readout.textContent);
+      const periodTicks = 20 * seconds;
+      const samples = [];
+      let elapsedTicks = 0;
+      for (let tick = 1; samples.length < 5; tick++) {
+        elapsedTicks++;
+        if (elapsedTicks >= periodTicks) {
+          samples.push(tick);
+          elapsedTicks %= periodTicks;
+        }
+      }
+      ticks.textContent = samples.join("、");
+    }
+    function restore(snapshot) {
+      const seconds = snapshot?.modelContent?.detectionIntervalSeconds;
+      const valid = Number.isFinite(seconds) && seconds >= 0.0625 && seconds <= 16;
+      slider.value = valid ? String((Math.log2(seconds) + 4) / 8) : "0.5";
+      render();
+    }
+    slider.addEventListener("input", render);
+    slider.addEventListener("change", () => {
+      render();
+      const host = window.openai;
+      if (typeof host?.setWidgetState === "function") {
+        host.setWidgetState({modelContent: {detectionIntervalSeconds: intervalSeconds()}}).catch(() => {});
+      }
+    });
+    window.addEventListener("openai:set_globals", event => {
+      const globals = event.detail?.globals;
+      if (globals && Object.hasOwn(globals, "widgetState")) restore(globals.widgetState);
+    });
+    restore(window.openai?.widgetState);
+  })();
+  </script>
+</div>

@@ -1,0 +1,214 @@
+<div id="ahr-hint-motion" lang="zh-CN" aria-label="区域跳字动效对比">
+  <div class="viz-row">
+    <label class="form-label">动效
+      <select class="form-select" data-effect>
+        <option value="Genshin">Genshin · 下移渐显</option>
+        <option value="Instant">Instant · 直接显隐</option>
+        <option value="Fade">Fade · 淡入淡出</option>
+        <option value="Wipe">Wipe · 擦除</option>
+        <option value="Zoom">Zoom · 轻缩放</option>
+        <option value="Typewriter">Typewriter · 逐字</option>
+      </select>
+    </label>
+    <button type="button" class="btn btn-primary" data-replay>重播</button>
+    <span class="text-muted text-small" data-phase aria-live="polite"></span>
+  </div>
+  <div class="card">
+    <div class="motion-stage" role="img" aria-label="整条跳字以中央标线为基准，C·B· 为普通文字，AAA 为红色">
+      <div class="motion-guide">
+        <h1 class="motion-sample" aria-hidden="true"><span data-run>C·B·</span><span data-run class="motion-accent">AAA</span></h1>
+      </div>
+    </div>
+  </div>
+  <label class="form-label">播放进度
+    <input class="form-range" type="range" min="0" max="2600" step="1" value="400" data-clock>
+  </label>
+  <div class="motion-fields">
+    <label class="form-label">完全可读时长 <output class="tabular-nums" data-value="holdMs"></output>
+      <input class="form-range" type="range" data-param="holdMs" min="0" max="4000" step="100" value="1800">
+    </label>
+    <label class="form-label" data-for="Genshin">起始高度 <output class="tabular-nums" data-value="offsetLines"></output>
+      <input class="form-range" type="range" data-param="offsetLines" min="0" max="2" step="0.05" value="0.75">
+    </label>
+    <label class="form-label" data-for="Fade" hidden>单侧淡化时长 <output class="tabular-nums" data-value="fadeMs"></output>
+      <input class="form-range" type="range" data-param="fadeMs" min="0" max="1200" step="50" value="300">
+    </label>
+    <label class="form-label" data-for="Wipe" hidden>从哪里展开
+      <select class="form-select" data-param="origin"><option value="left">左侧</option><option value="right">右侧</option><option value="center">中间</option></select>
+    </label>
+    <label class="form-label" data-for="Zoom" hidden>起始比例 <output class="tabular-nums" data-value="fromScale"></output>
+      <input class="form-range" type="range" data-param="fromScale" min="0.60" max="1" step="0.01" value="0.90">
+    </label>
+    <label class="form-label" data-for="Typewriter" hidden>逐字速度 <output class="tabular-nums" data-value="rate"></output>
+      <input class="form-range" type="range" data-param="rate" min="4" max="30" step="1" value="14">
+    </label>
+  </div>
+  <style>
+    #ahr-hint-motion { display: grid; gap: var(--font-size-base, 14px); }
+    #ahr-hint-motion [hidden] { display: none !important; }
+    #ahr-hint-motion .motion-stage { min-height: calc(var(--font-size-base, 14px) * 8); display: grid; place-items: center; }
+    #ahr-hint-motion .motion-guide { display: flex; align-items: center; gap: var(--font-size-base, 14px); }
+    #ahr-hint-motion .motion-guide::before, #ahr-hint-motion .motion-guide::after { content: ""; width: calc(var(--font-size-base, 14px) * 1.6); height: 1px; background: var(--border); }
+    #ahr-hint-motion .motion-sample { white-space: pre; transform-origin: center; margin: 0; color: var(--card-foreground); }
+    #ahr-hint-motion .motion-accent { color: var(--red); }
+    #ahr-hint-motion .motion-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: var(--font-size-base, 14px); }
+  </style>
+  <script>
+  (() => {
+    const root = document.getElementById("ahr-hint-motion");
+    const effect = root.querySelector("[data-effect]");
+    const replay = root.querySelector("[data-replay]");
+    const phaseLabel = root.querySelector("[data-phase]");
+    const clock = root.querySelector("[data-clock]");
+    const sample = root.querySelector(".motion-sample");
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const controls = Object.fromEntries(Array.from(root.querySelectorAll("[data-param]"), el => [el.dataset.param, el]));
+    const letters = [];
+    const segmenter = new Intl.Segmenter(undefined, {granularity: "grapheme"});
+    for (const run of root.querySelectorAll("[data-run]")) {
+      const spans = Array.from(segmenter.segment(run.textContent), part => {
+        const span = document.createElement("span");
+        span.textContent = part.segment;
+        return span;
+      });
+      run.replaceChildren(...spans);
+      letters.push(...spans);
+    }
+    let frameId = 0;
+    let currentMs = 0;
+    function timing() {
+      const entry = {Genshin: 400, Instant: 0, Fade: Number(controls.fadeMs.value), Wipe: 400, Zoom: 300,
+        Typewriter: Math.round(1000 * letters.length / Number(controls.rate.value))}[effect.value];
+      const hold = Number(controls.holdMs.value);
+      const exit = effect.value === "Typewriter" ? 250 : entry;
+      return {entry, hold, exit, total: entry + hold + exit};
+    }
+    function paint(time) {
+      const t = timing();
+      currentMs = Math.max(0, Math.min(time, t.total));
+      clock.max = String(t.total);
+      clock.value = String(Math.round(currentMs));
+      let phase = "停留";
+      let fraction = 1;
+      if (currentMs >= t.total) {
+        phase = "结束";
+        fraction = 0;
+      } else if (currentMs < t.entry) {
+        phase = "入场";
+        fraction = currentMs / t.entry;
+      } else if (currentMs >= t.entry + t.hold) {
+        phase = "退场";
+        fraction = (t.total - currentMs) / t.exit;
+      }
+      if (phaseLabel.textContent !== phase) phaseLabel.textContent = phase;
+      clock.setAttribute("aria-valuetext", phase + "，" + Math.round(currentMs) + " 毫秒");
+      const progress = fraction * (2 - fraction);
+      let opacity = progress;
+      let transform = "none";
+      let clip = "none";
+      let visibleLetters = letters.length;
+      switch (effect.value) {
+        case "Genshin": {
+          const lineHeight = sample.offsetHeight;
+          const offset = (1 - progress) * Number(controls.offsetLines.value) * lineHeight;
+          transform = "translateY(" + (-offset) + "px)";
+          break;
+        }
+        case "Zoom": {
+          const startScale = Number(controls.fromScale.value);
+          transform = "scale(" + (startScale + (1 - startScale) * progress) + ")";
+          break;
+        }
+        case "Wipe": {
+          const hidden = 100 * (1 - progress);
+          const origin = controls.origin.value;
+          const left = origin === "left" ? 0 : origin === "right" ? hidden : hidden / 2;
+          clip = "inset(0 " + (hidden - left) + "% 0 " + left + "%)";
+          opacity = 1;
+          break;
+        }
+        case "Typewriter":
+          if (phase === "入场") {
+            visibleLetters = Math.floor(currentMs * Number(controls.rate.value) / 1000);
+            opacity = 1;
+          }
+          break;
+      }
+      sample.style.transform = transform;
+      sample.style.opacity = String(opacity);
+      sample.style.clipPath = clip;
+      letters.forEach((letter, i) => { letter.style.visibility = i < visibleLetters ? "visible" : "hidden"; });
+    }
+    function stop() {
+      cancelAnimationFrame(frameId);
+      frameId = 0;
+    }
+    function updateControls() {
+      root.querySelectorAll("[data-for]").forEach(el => { el.hidden = el.dataset.for !== effect.value; });
+      const formatted = {
+        holdMs: controls.holdMs.value + " ms", fadeMs: controls.fadeMs.value + " ms",
+        offsetLines: controls.offsetLines.value + " 行", fromScale: Math.round(100 * Number(controls.fromScale.value)) + "%",
+        rate: controls.rate.value + " 字/秒"
+      };
+      root.querySelectorAll("[data-value]").forEach(el => { el.textContent = formatted[el.dataset.value]; });
+      replay.textContent = motionPreference.matches ? "逐段查看" : "重播";
+    }
+    function remember() {
+      const host = window.openai;
+      if (!host || typeof host.setWidgetState !== "function") return;
+      const parameters = Object.fromEntries(Object.entries(controls).map(([key, el]) => [key, el.value]));
+      host.setWidgetState({modelContent: {effect: effect.value}, privateContent: {parameters}}).catch(() => {});
+    }
+    function restore(snapshot) {
+      stop();
+      const name = snapshot?.modelContent?.effect;
+      if (Array.from(effect.options).some(o => o.value === name)) effect.value = name;
+      const saved = snapshot?.privateContent?.parameters || {};
+      for (const [key, control] of Object.entries(controls)) {
+        if (!Object.hasOwn(saved, key)) continue;
+        const value = saved[key];
+        if (control.tagName === "SELECT") {
+          if (Array.from(control.options).some(o => o.value === value)) control.value = value;
+        } else if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) {
+          control.value = String(Math.max(Number(control.min), Math.min(Number(control.max), Number(value))));
+        }
+      }
+      updateControls();
+      paint(timing().entry);
+    }
+    effect.addEventListener("change", () => { stop(); updateControls(); paint(timing().entry); remember(); });
+    for (const [key, control] of Object.entries(controls)) {
+      control.addEventListener("input", () => {
+        stop();
+        updateControls();
+        const t = timing();
+        paint(key === "holdMs" ? t.entry + t.hold / 2 : t.entry / 2);
+      });
+      control.addEventListener("change", remember);
+    }
+    clock.addEventListener("input", () => { stop(); paint(Number(clock.value)); });
+    replay.addEventListener("click", () => {
+      stop();
+      const t = timing();
+      if (motionPreference.matches) {
+        const stops = [0, t.entry / 2, t.entry, t.entry + t.hold + t.exit / 2, t.total];
+        paint(stops.find(ms => ms > currentMs + 1) ?? 0);
+        return;
+      }
+      const start = performance.now();
+      paint(0);
+      function advance(now) {
+        paint(now - start);
+        if (currentMs < t.total) frameId = requestAnimationFrame(advance);
+      }
+      frameId = requestAnimationFrame(advance);
+    });
+    motionPreference.addEventListener("change", () => { stop(); updateControls(); paint(timing().entry); });
+    window.addEventListener("openai:set_globals", event => {
+      const globals = event.detail?.globals;
+      if (globals && Object.hasOwn(globals, "widgetState")) restore(globals.widgetState);
+    });
+    restore(window.openai?.widgetState);
+  })();
+  </script>
+</div>

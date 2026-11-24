@@ -1,0 +1,11 @@
+.gradle/
+.stonecutter/
+**/build/
+**/run/
+versions/*/.gradle/
+versions/*/src/
+.idea/
+*.iml
+.classpath
+.project
+.settings/

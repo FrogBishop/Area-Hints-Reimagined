@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "area_hints_reimagined",
+  "version": "${version}",
+  "name": "Area Hints Reimagined",
+  "description": "Named regions with exact integer geometry and localized client-side hints.",
+  "license": "GPL-3.0-only",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["io.github.imsng1019.ahr.fabric.AreaHints"],
+    "client": ["io.github.imsng1019.ahr.client.AreaHintsClient"]
+  },
+  "depends": {
+    "minecraft": "${minecraft}",
+    "java": ">=25",
+    "fabricloader": ">=${loader}",
+    "fabric-api": ">=${api}"
+  }
+}
